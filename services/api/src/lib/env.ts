@@ -15,6 +15,12 @@ const schema = z.object({
   SMTP_USER: z.string().default(""),
   SMTP_PASS: z.string().default(""),
   SMTP_FROM: z.string().default(""),
+  SMTP_TLS_SERVERNAME: z.string().optional().default(""),
+  SMTP_TLS_REJECT_UNAUTHORIZED: z
+    .union([z.literal("true"), z.literal("false")])
+    .transform((v) => v === "true")
+    .default("true"),
+  SMTP_TLS_CA_FILE: z.string().optional().default(""),
 
   DATABASE_URL: z.string().optional().default(""),
 

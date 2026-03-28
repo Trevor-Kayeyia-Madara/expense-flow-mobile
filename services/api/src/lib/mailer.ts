@@ -1,4 +1,6 @@
 import nodemailer from "nodemailer";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { env } from "./env";
 
 type MailInput = {
@@ -25,7 +27,19 @@ function getTransporter() {
     host: env.SMTP_HOST,
     port: env.SMTP_PORT,
     secure: env.SMTP_SECURE,
-    auth: { user: env.SMTP_USER, pass: env.SMTP_PASS }
+    auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
+    tls:
+      env.SMTP_TLS_CA_FILE ||
+      env.SMTP_TLS_SERVERNAME ||
+      env.SMTP_TLS_REJECT_UNAUTHORIZED === false
+        ? {
+            servername: env.SMTP_TLS_SERVERNAME || undefined,
+            rejectUnauthorized: env.SMTP_TLS_REJECT_UNAUTHORIZED,
+            ca: env.SMTP_TLS_CA_FILE
+              ? readFileSync(resolve(process.cwd(), env.SMTP_TLS_CA_FILE), "utf8")
+              : undefined
+          }
+        : undefined
   });
 
   return transporter;

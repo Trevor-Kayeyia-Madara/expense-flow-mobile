@@ -1,7 +1,12 @@
 node_modules/
 dist/
 .env
+.env.example
 .DS_Store
 Thumbs.db
 
 services/api/uploads/
+services/api/certs/
+*.pem
+*.crt
+*.key
