@@ -1,0 +1,15 @@
+{
+  "name": "expenseflow-mobile-first",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm -w services/api run dev",
+    "dev:mobile": "npm -w apps/mobile run dev",
+    "dev:api": "npm -w services/api run dev"
+  }
+}
+
