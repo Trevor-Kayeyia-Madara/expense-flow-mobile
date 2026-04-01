@@ -3,7 +3,11 @@ import type { ApiClient } from "./App";
 
 type SubmitState = "idle" | "compressing" | "uploading" | "done";
 
-export function ExpenseForm(props: { api: ApiClient; onCreated?: () => void }) {
+export function ExpenseForm(props: {
+  api: ApiClient;
+  onCreated?: () => void;
+  onNotify?: (message: string, kind?: "success" | "error" | "info") => void;
+}) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [amount, setAmount] = useState<string>("");
   const [description, setDescription] = useState<string>("");
@@ -14,6 +18,10 @@ export function ExpenseForm(props: { api: ApiClient; onCreated?: () => void }) {
   const [lastId, setLastId] = useState<string | null>(null);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
+  const [directorEmail, setDirectorEmail] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailMsg, setEmailMsg] = useState<string | null>(null);
+  const [autoEmailMsg, setAutoEmailMsg] = useState<string | null>(null);
 
   const canSubmit = useMemo(() => {
     const amt = Number(amount);
@@ -30,7 +38,7 @@ export function ExpenseForm(props: { api: ApiClient; onCreated?: () => void }) {
     <section style={{ display: "grid", gap: 14 }}>
       <div style={styles.hero}>
         <h1 style={styles.h1}>New expense</h1>
-        <p style={styles.p}>Receipt + amount + short description. Done in 15–30 seconds.</p>
+        <p style={styles.p}>Receipt + amount + short description. Done in 15-30 seconds.</p>
       </div>
 
       <div style={styles.card}>
@@ -98,6 +106,64 @@ export function ExpenseForm(props: { api: ApiClient; onCreated?: () => void }) {
           <div style={styles.success}>
             Submitted. ID: {lastId}
             <div style={{ height: 10 }} />
+            {autoEmailMsg ? (
+              <div style={{ marginTop: 0, ...styles.mutedBox }}>{autoEmailMsg}</div>
+            ) : null}
+            <div style={{ height: 10 }} />
+            <label style={styles.label}>
+              Director email (optional)
+              <input
+                style={styles.input}
+                inputMode="email"
+                placeholder="director@company.com"
+                value={directorEmail}
+                onChange={(e) => setDirectorEmail(e.target.value)}
+              />
+            </label>
+            <button
+              style={{
+                ...styles.secondary,
+                opacity: emailBusy ? 0.7 : 1
+              }}
+              disabled={emailBusy}
+              onClick={async () => {
+                if (!directorEmail.trim()) {
+                  const msg = "Enter a director email, or use Share approval link.";
+                  setEmailMsg(msg);
+                  props.onNotify?.(msg, "info");
+                  return;
+                }
+                setEmailBusy(true);
+                setEmailMsg(null);
+                try {
+                  const res = await props.api.requestApprovalEmail(lastId, directorEmail.trim());
+                  if (!res.emailed) {
+                    await shareLink(res.approvalUrl);
+                    const msg = res.reason
+                      ? `Not emailed: ${res.reason}. Link copied/shared.`
+                      : "Not emailed. Link copied/shared.";
+                    setEmailMsg(msg);
+                    props.onNotify?.(msg, "info");
+                  } else {
+                    const to = res.emailedTo ? ` to ${res.emailedTo}` : "";
+                    const id = res.mailId ? ` (${res.mailId})` : "";
+                    const msg = `Approval email sent${to}${id}.`;
+                    setEmailMsg(msg);
+                    props.onNotify?.(msg, "success");
+                  }
+                } catch (e) {
+                  const msg = e instanceof Error ? e.message : "Failed to send email";
+                  setEmailMsg(msg);
+                  props.onNotify?.(msg, "error");
+                } finally {
+                  setEmailBusy(false);
+                }
+              }}
+            >
+              {emailBusy ? "Sending..." : "Send approval email"}
+            </button>
+            {emailMsg ? <div style={{ marginTop: 10, ...styles.mutedBox }}>{emailMsg}</div> : null}
+            <div style={{ height: 10 }} />
             <button
               style={{
                 ...styles.secondary,
@@ -110,15 +176,19 @@ export function ExpenseForm(props: { api: ApiClient; onCreated?: () => void }) {
                 try {
                   const res = await props.api.createApprovalLink(lastId);
                   await shareLink(res.approvalUrl);
-                  setShareMsg("Approval link shared/copied.");
+                  const msg = "Approval link shared/copied.";
+                  setShareMsg(msg);
+                  props.onNotify?.(msg, "success");
                 } catch (e) {
-                  setShareMsg(e instanceof Error ? e.message : "Failed to create link");
+                  const msg = e instanceof Error ? e.message : "Failed to create link";
+                  setShareMsg(msg);
+                  props.onNotify?.(msg, "error");
                 } finally {
                   setShareBusy(false);
                 }
               }}
             >
-              {shareBusy ? "Generating link…" : "Share approval link"}
+              {shareBusy ? "Generating link..." : "Share approval link"}
             </button>
             {shareMsg ? <div style={{ marginTop: 10, ...styles.mutedBox }}>{shareMsg}</div> : null}
           </div>
@@ -150,10 +220,34 @@ export function ExpenseForm(props: { api: ApiClient; onCreated?: () => void }) {
               setAmount("");
               setDescription("");
               setReceipt(null);
+              setDirectorEmail("");
+              setEmailMsg(null);
+              setAutoEmailMsg("Sending to director...");
               if (previewUrl) URL.revokeObjectURL(previewUrl);
               setPreviewUrl(null);
               setState("done");
               setTimeout(() => setState("idle"), 800);
+
+              try {
+                const approval = await props.api.requestApprovalAuto(res.id);
+                if (!approval.emailed) {
+                  const msg = approval.reason
+                    ? `Not emailed: ${approval.reason}. Use "Share approval link".`
+                    : 'Not emailed. Use "Share approval link".';
+                  setAutoEmailMsg(msg);
+                  props.onNotify?.(msg, "info");
+                } else {
+                  const to = approval.emailedTo ? ` to ${approval.emailedTo}` : "";
+                  const id = approval.mailId ? ` (${approval.mailId})` : "";
+                  const msg = `Approval email sent${to}${id}.`;
+                  setAutoEmailMsg(msg);
+                  props.onNotify?.(msg, "success");
+                }
+              } catch (e) {
+                const msg = e instanceof Error ? e.message : "Auto email failed";
+                setAutoEmailMsg(msg);
+                props.onNotify?.(msg, "error");
+              }
               props.onCreated?.();
             } catch (e) {
               setState("idle");
@@ -162,9 +256,9 @@ export function ExpenseForm(props: { api: ApiClient; onCreated?: () => void }) {
           }}
         >
           {state === "compressing"
-            ? "Optimizing photo…"
+            ? "Optimizing photo..."
             : state === "uploading"
-              ? "Submitting…"
+              ? "Submitting..."
               : "Submit expense"}
         </button>
       </div>

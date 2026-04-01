@@ -1,9 +1,13 @@
 import { useState } from "react";
 import type { ApiClient } from "./App";
 
-export function Login(props: { api: ApiClient; onLogin: (token: string) => void }) {
-  const [email, setEmail] = useState("admin@demo.local");
-  const [password, setPassword] = useState("admin1234");
+export function Login(props: {
+  api: ApiClient;
+  onLogin: (token: string, user: { id: string; email: string; tenantId: string; role: string }) => void;
+  onNotify?: (message: string, kind?: "success" | "error" | "info") => void;
+}) {
+  const [email, setEmail] = useState("techsavvy826@gmail.com");
+  const [password, setPassword] = useState("sales1234");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,10 +46,13 @@ export function Login(props: { api: ApiClient; onLogin: (token: string) => void 
           setBusy(true);
           setError(null);
           try {
-            const { token } = await props.api.login(email.trim(), password);
-            props.onLogin(token);
+            const { token, user } = await props.api.login(email.trim(), password);
+            props.onLogin(token, user);
+            props.onNotify?.(`Signed in as ${user.email} (${user.role}).`, "success");
           } catch (e) {
-            setError(e instanceof Error ? e.message : "Login failed");
+            const msg = e instanceof Error ? e.message : "Login failed";
+            setError(msg);
+            props.onNotify?.(msg, "error");
           } finally {
             setBusy(false);
           }

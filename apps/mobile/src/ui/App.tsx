@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { ExpenseForm } from "./ExpenseForm";
 import { ExpensesList } from "./ExpensesList";
+import { DirectorPanel } from "./DirectorPanel";
 import { Login } from "./Login";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "";
@@ -13,6 +14,15 @@ export default function App() {
   const [token, setToken] = useState<string | null>(() => getToken());
   const api = useMemo(() => new ApiClient(API_BASE_URL, token), [token]);
   const [tab, setTab] = useState<"new" | "list">("new");
+  const [me, setMe] = useState<{ role: string; email: string } | null>(null);
+  const [toast, setToast] = useState<{ kind: "success" | "error" | "info"; message: string } | null>(
+    null
+  );
+
+  function notify(message: string, kind: "success" | "error" | "info" = "info") {
+    setToast({ kind, message });
+    window.setTimeout(() => setToast(null), 6000);
+  }
 
   return (
     <div style={styles.shell}>
@@ -25,25 +35,31 @@ export default function App() {
       </header>
 
       <main style={styles.main}>
+        {toast ? <div style={toastStyle(toast.kind)}>{toast.message}</div> : null}
         {!token ? (
           <Login
             api={api}
-            onLogin={(newToken) => {
+            onLogin={(newToken, user) => {
               localStorage.setItem("expenseflow_token", newToken);
               setToken(newToken);
+              setMe({ role: user.role, email: user.email });
             }}
+            onNotify={notify}
           />
         ) : (
           <>
-            {tab === "new" ? (
+            {me?.role === "director" ? (
+              <DirectorPanel api={api} onNotify={notify} />
+            ) : tab === "new" ? (
               <ExpenseForm
                 api={api}
                 onCreated={() => {
                   setTab("list");
                 }}
+                onNotify={notify}
               />
             ) : (
-              <ExpensesList api={api} />
+              <ExpensesList api={api} onNotify={notify} />
             )}
           </>
         )}
@@ -71,7 +87,10 @@ class ApiClient {
       body: JSON.stringify({ email, password })
     });
     if (!res.ok) throw new Error(await safeText(res));
-    return (await res.json()) as { token: string };
+    return (await res.json()) as {
+      token: string;
+      user: { id: string; email: string; tenantId: string; role: string };
+    };
   }
 
   async createExpense(input: {
@@ -123,6 +142,73 @@ class ApiClient {
     if (!res.ok) throw new Error(await safeText(res));
     return (await res.json()) as { ok: true; approvalUrl: string; expiresAt: string };
   }
+
+  async requestApprovalEmail(expenseId: string, directorEmail: string) {
+    const res = await fetch(`${this.baseUrl}/expenses/${expenseId}/request-approval`, {
+      method: "POST",
+      headers: this.headers({ "content-type": "application/json" }),
+      body: JSON.stringify({ directorEmail })
+    });
+    if (!res.ok) throw new Error(await safeText(res));
+    return (await res.json()) as {
+      ok: true;
+      approvalUrl: string;
+      expiresAt: string;
+      emailed: boolean;
+      emailedTo?: string;
+      mailProvider?: string;
+      mailId?: string;
+      reason?: string;
+    };
+  }
+
+  async requestApprovalAuto(expenseId: string) {
+    const res = await fetch(`${this.baseUrl}/expenses/${expenseId}/request-approval`, {
+      method: "POST",
+      headers: this.headers({ "content-type": "application/json" }),
+      body: JSON.stringify({})
+    });
+    if (!res.ok) throw new Error(await safeText(res));
+    return (await res.json()) as {
+      ok: true;
+      approvalUrl: string;
+      expiresAt: string;
+      emailed: boolean;
+      emailedTo?: string;
+      mailProvider?: string;
+      mailId?: string;
+      reason?: string;
+    };
+  }
+
+  async directorQueue() {
+    const res = await fetch(`${this.baseUrl}/director/queue`, {
+      method: "GET",
+      headers: this.headers()
+    });
+    if (!res.ok) throw new Error(await safeText(res));
+    return (await res.json()) as {
+      items: Array<{
+        id: string;
+        amountCents: number;
+        currency: string;
+        description: string;
+        status: string;
+        createdAt: string;
+        submittedBy: string;
+      }>;
+    };
+  }
+
+  async directorDecision(expenseId: string, decision: "approved" | "rejected") {
+    const res = await fetch(`${this.baseUrl}/director/expenses/${expenseId}/decision`, {
+      method: "POST",
+      headers: this.headers({ "content-type": "application/json" }),
+      body: JSON.stringify({ decision })
+    });
+    if (!res.ok) throw new Error(await safeText(res));
+    return (await res.json()) as { ok: true; decision: "approved" | "rejected" };
+  }
 }
 
 async function safeText(res: Response) {
@@ -171,10 +257,28 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 999,
     padding: "8px 10px",
     fontSize: 13
+  },
+  toastBase: {
+    marginBottom: 12,
+    padding: "10px 12px",
+    borderRadius: 12,
+    fontSize: 13,
+    border: "1px solid rgba(255,255,255,0.10)"
   }
 };
 
 export type { ApiClient };
+
+function toastStyle(kind: "success" | "error" | "info"): React.CSSProperties {
+  const base = styles.toastBase as React.CSSProperties;
+  if (kind === "success") {
+    return { ...base, background: "rgba(34,197,94,0.12)", color: "rgba(205,255,225,0.95)" };
+  }
+  if (kind === "error") {
+    return { ...base, background: "rgba(239,68,68,0.12)", color: "rgba(255,220,220,0.95)" };
+  }
+  return { ...base, background: "rgba(0,0,0,0.18)", color: "rgba(232,238,252,0.92)" };
+}
 
 function HeaderActions(props: {
   tab: "new" | "list";

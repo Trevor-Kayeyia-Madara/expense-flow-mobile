@@ -6,6 +6,17 @@ const schema = z.object({
 
   PUBLIC_BASE_URL: z.string().default("http://localhost:4000"),
 
+  // Mail provider: "smtp" (default), "sendgrid", or "resend"
+  MAIL_PROVIDER: z.enum(["smtp", "sendgrid", "resend"]).default("smtp"),
+
+  // SendGrid
+  SENDGRID_API_KEY: z.string().optional().default(""),
+  SENDGRID_FROM: z.string().optional().default(""),
+
+  // Resend
+  RESEND_API_KEY: z.string().optional().default(""),
+  RESEND_FROM: z.string().optional().default(""),
+
   SMTP_HOST: z.string().default(""),
   SMTP_PORT: z.coerce.number().int().positive().default(465),
   SMTP_SECURE: z
@@ -38,7 +49,27 @@ const schema = z.object({
 
   SEED_TENANT_NAME: z.string().default("Demo Company"),
   SEED_ADMIN_EMAIL: z.string().email().default("admin@demo.local"),
-  SEED_ADMIN_PASSWORD: z.string().min(8).default("admin1234")
+  SEED_ADMIN_PASSWORD: z.string().min(8).default("admin1234"),
+
+  SEED_DIRECTOR_EMAIL: z.union([z.string().email(), z.literal("")]).default(""),
+  SEED_DIRECTOR_PASSWORD: z.string().optional().default(""),
+
+  SEED_SALES_EMAIL: z.union([z.string().email(), z.literal("")]).default(""),
+  SEED_SALES_PASSWORD: z.string().optional().default("")
 });
 
-export const env = schema.parse(process.env);
+const normalizedEnv = {
+  ...process.env,
+  // Allow common lowercase env names too (dotenv files are user-edited).
+  MAIL_PROVIDER: process.env.MAIL_PROVIDER ?? process.env.mail_provider,
+  RESEND_API_KEY: process.env.RESEND_API_KEY ?? process.env.resend_api_key,
+  RESEND_FROM: process.env.RESEND_FROM ?? process.env.resend_from,
+  SENDGRID_API_KEY: process.env.SENDGRID_API_KEY ?? process.env.sendgrid_api_key,
+  SENDGRID_FROM: process.env.SENDGRID_FROM ?? process.env.sendgrid_from,
+  SEED_DIRECTOR_EMAIL: process.env.SEED_DIRECTOR_EMAIL ?? process.env.seed_director_email,
+  SEED_DIRECTOR_PASSWORD: process.env.SEED_DIRECTOR_PASSWORD ?? process.env.seed_director_password,
+  SEED_SALES_EMAIL: process.env.SEED_SALES_EMAIL ?? process.env.seed_sales_email,
+  SEED_SALES_PASSWORD: process.env.SEED_SALES_PASSWORD ?? process.env.seed_sales_password
+};
+
+export const env = schema.parse(normalizedEnv);

@@ -13,6 +13,7 @@ import { authRoutes } from "./routes/auth";
 import { approvalsRoutes } from "./routes/approvals";
 import { expensesRoutes } from "./routes/expenses";
 import { adminRoutes } from "./routes/admin";
+import { directorRoutes } from "./routes/director";
 
 async function main() {
   const app = Fastify({ logger: true });
@@ -61,6 +62,7 @@ async function main() {
   await app.register(expensesRoutes, { prefix: "/expenses" });
   await app.register(approvalsRoutes, { prefix: "/approvals" });
   await app.register(adminRoutes, { prefix: "/admin" });
+  await app.register(directorRoutes, { prefix: "/director" });
 
   const listenSchema = z.object({
     PORT: z.coerce.number().min(1).max(65535).default(4000),

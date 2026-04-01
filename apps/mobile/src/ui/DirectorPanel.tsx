@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ApiClient } from "./App";
 
-export function ExpensesList(props: {
+export function DirectorPanel(props: {
   api: ApiClient;
   onNotify?: (message: string, kind?: "success" | "error" | "info") => void;
 }) {
@@ -15,20 +15,17 @@ export function ExpensesList(props: {
       description: string;
       status: string;
       createdAt: string;
+      submittedBy: string;
     }>
   >([]);
-
-  const total = useMemo(() => {
-    return items.reduce((sum, e) => sum + e.amountCents, 0);
-  }, [items]);
 
   async function load(opts?: { silent?: boolean }) {
     setBusy(true);
     setError(null);
     try {
-      const res = await props.api.listExpenses();
+      const res = await props.api.directorQueue();
       setItems(res.items);
-      if (!opts?.silent) props.onNotify?.("Expenses refreshed.", "success");
+      if (!opts?.silent) props.onNotify?.("Queue refreshed.", "success");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to load";
       setError(msg);
@@ -47,31 +44,62 @@ export function ExpensesList(props: {
     <section style={{ display: "grid", gap: 12 }}>
       <div style={styles.card}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <h1 style={styles.h1}>My expenses</h1>
+          <h1 style={styles.h1}>Director approvals</h1>
           <button style={styles.link} disabled={busy} onClick={() => void load()}>
             {busy ? "Refreshing…" : "Refresh"}
           </button>
         </div>
-        <div style={styles.muted}>
-          Total (last {items.length}): <strong>{formatMoney(total, "KES")}</strong>
-        </div>
+        <div style={styles.muted}>Pending: {items.length}</div>
       </div>
 
       {error ? <div style={styles.error}>{error}</div> : null}
 
       {items.length === 0 && !busy ? (
-        <div style={styles.empty}>No expenses yet.</div>
+        <div style={styles.empty}>No pending approvals.</div>
       ) : (
         <div style={{ display: "grid", gap: 10 }}>
           {items.map((e) => (
             <div key={e.id} style={styles.item}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                <div style={{ fontWeight: 800 }}>{truncate(e.description, 44)}</div>
+                <div style={{ fontWeight: 900 }}>{truncate(e.description, 44)}</div>
                 <div style={{ fontWeight: 900 }}>{formatMoney(e.amountCents, e.currency)}</div>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                <div style={styles.badge(e.status)}>{e.status}</div>
-                <div style={styles.muted}>{new Date(e.createdAt).toLocaleString()}</div>
+              <div style={styles.muted}>
+                From: {e.submittedBy} • {new Date(e.createdAt).toLocaleString()}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <button
+                  style={styles.approve}
+                  onClick={async () => {
+                    try {
+                      await props.api.directorDecision(e.id, "approved");
+                      props.onNotify?.("Approved.", "success");
+                      await load();
+                    } catch (err) {
+                      const msg = err instanceof Error ? err.message : "Approve failed";
+                      props.onNotify?.(msg, "error");
+                      setError(msg);
+                    }
+                  }}
+                >
+                  Approve
+                </button>
+                <button
+                  style={styles.reject}
+                  onClick={async () => {
+                    try {
+                      await props.api.directorDecision(e.id, "rejected");
+                      props.onNotify?.("Rejected.", "success");
+                      await load();
+                    } catch (err) {
+                      const msg = err instanceof Error ? err.message : "Reject failed";
+                      props.onNotify?.(msg, "error");
+                      setError(msg);
+                    }
+                  }}
+                >
+                  Reject
+                </button>
               </div>
             </div>
           ))}
@@ -119,20 +147,24 @@ const styles: Record<string, any> = {
     display: "grid",
     gap: 10
   },
-  badge: (status: string) => ({
-    display: "inline-block",
-    padding: "6px 10px",
-    borderRadius: 999,
-    fontSize: 12,
-    fontWeight: 900,
+  approve: {
+    padding: "14px 12px",
+    borderRadius: 14,
+    border: "0",
+    background: "#22c55e",
     color: "#06130b",
-    background:
-      status === "approved"
-        ? "rgba(34,197,94,0.95)"
-        : status === "rejected"
-          ? "rgba(239,68,68,0.95)"
-          : "rgba(59,130,246,0.95)"
-  }),
+    fontWeight: 900,
+    fontSize: 16
+  },
+  reject: {
+    padding: "14px 12px",
+    borderRadius: 14,
+    border: "0",
+    background: "#ef4444",
+    color: "#220707",
+    fontWeight: 900,
+    fontSize: 16
+  },
   error: {
     padding: "10px 12px",
     borderRadius: 12,

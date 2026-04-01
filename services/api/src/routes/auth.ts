@@ -14,11 +14,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const { email, password } = bodySchema.parse(req.body);
     const pool = getPool();
     const result = await pool.query(
-      "SELECT id, tenant_id as \"tenantId\", password_hash as \"passwordHash\", role FROM users WHERE email = $1 LIMIT 1",
+      "SELECT id, email, tenant_id as \"tenantId\", password_hash as \"passwordHash\", role FROM users WHERE email = $1 LIMIT 1",
       [email.toLowerCase()]
     );
     const user = result.rows[0] as
-      | { id: string; tenantId: string; passwordHash: string; role: string }
+      | { id: string; email: string; tenantId: string; passwordHash: string; role: string }
       | undefined;
     if (!user) throw new Error("Invalid credentials");
 
@@ -26,14 +26,14 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     if (!ok) throw new Error("Invalid credentials");
 
     const token = app.jwt.sign(
-      { sub: user.id, tid: user.tenantId, role: user.role },
+      { sub: user.id, tid: user.tenantId, role: user.role, email: user.email },
       { expiresIn: "30d" }
     );
-    return { token };
+    return { token, user: { id: user.id, email: user.email, tenantId: user.tenantId, role: user.role } };
   });
 
   app.get("/me", async (req) => {
-    const { userId, tenantId, role } = await requireAuth(app, req);
-    return { userId, tenantId, role };
+    const { userId, tenantId, role, email } = await requireAuth(app, req);
+    return { userId, tenantId, role, email };
   });
 };

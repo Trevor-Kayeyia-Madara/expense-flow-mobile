@@ -53,11 +53,26 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
     const body = z.object({ to: z.string().email() }).parse(req.body);
     const { sendMail } = await import("../lib/mailer");
-    await sendMail({
+    const result = await sendMail({
       to: body.to,
-      subject: "ExpenseFlow SMTP test",
-      text: "SMTP is configured and working."
+      subject: "ExpenseFlow email test",
+      text: "Email sending is configured and working."
     });
-    return { ok: true };
+    return { ok: true, ...result };
+  });
+
+  // Alias endpoint name (same behavior).
+  app.post("/mail/test", async (req) => {
+    const { role } = await requireAuth(app, req);
+    if (role !== "admin") throw new Error("Not allowed");
+
+    const body = z.object({ to: z.string().email() }).parse(req.body);
+    const { sendMail } = await import("../lib/mailer");
+    const result = await sendMail({
+      to: body.to,
+      subject: "ExpenseFlow email test",
+      text: "Email sending is configured and working."
+    });
+    return { ok: true, ...result };
   });
 };

@@ -158,7 +158,7 @@ export const expensesRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.post("/:id/request-approval", async (req) => {
-    const { userId, tenantId, role } = await requireAuth(app, req);
+    const { userId, tenantId, role, email } = await requireAuth(app, req);
     const params = z.object({ id: z.string().uuid() }).parse(req.params);
     const body = z
       .object({
@@ -207,32 +207,58 @@ export const expensesRoutes: FastifyPluginAsync = async (app) => {
     const approvalUrl = `${env.PUBLIC_BASE_URL.replace(/\/$/, "")}/approvals/${token}/view`;
     const amount = (expense.amountCents / 100).toFixed(2);
 
+    let directorEmail = body.directorEmail;
+    if (!directorEmail) {
+      const director = await pool.query(
+        `SELECT email
+         FROM users
+         WHERE tenant_id = $1 AND role = 'director'
+         ORDER BY created_at ASC
+         LIMIT 1`,
+        [tenantId]
+      );
+      directorEmail = (director.rows[0]?.email as string | undefined) ?? undefined;
+    }
+
     let emailed = false;
-    if (body.directorEmail) {
+    let emailedTo: string | undefined = undefined;
+    let mailProvider: string | undefined = undefined;
+    let mailId: string | undefined = undefined;
+    if (directorEmail) {
       if (!isMailConfigured()) {
         // Still return a usable link (share via WhatsApp/SMS) even if SMTP isn't set up.
         return { ok: true, approvalUrl, expiresAt, emailed: false, reason: "SMTP not configured" };
       }
-      await sendMail({
-        to: body.directorEmail,
+      const result = await sendMail({
+        to: directorEmail,
+        replyTo: email || undefined,
         subject: `Approve expense: ${expense.currency} ${amount}`,
         text:
           `Expense approval request\n\n` +
           `Amount: ${expense.currency} ${amount}\n` +
           `Description: ${expense.description}\n` +
+          (email ? `Submitted by: ${email}\n` : "") +
           `Approve/Reject: ${approvalUrl}\n` +
           `Expires: ${expiresAt.toISOString()}\n`,
         html:
           `<p><strong>Expense approval request</strong></p>` +
           `<p>Amount: <strong>${escapeHtml(expense.currency)} ${escapeHtml(amount)}</strong><br/>` +
           `Description: ${escapeHtml(expense.description)}</p>` +
+          (email ? `<p>Submitted by: ${escapeHtml(email)}</p>` : "") +
           `<p><a href="${approvalUrl}">Open approval link</a></p>` +
           `<p style="color:#666">Expires: ${escapeHtml(expiresAt.toISOString())}</p>`
       });
       emailed = true;
+      emailedTo = directorEmail;
+      mailProvider = (result as any)?.provider;
+      mailId = (result as any)?.id ?? (result as any)?.messageId;
     }
 
-    return { ok: true, approvalUrl, expiresAt, emailed };
+    if (!emailed) {
+      return { ok: true, approvalUrl, expiresAt, emailed: false, reason: "No director user found" };
+    }
+
+    return { ok: true, approvalUrl, expiresAt, emailed, emailedTo, mailProvider, mailId };
   });
 
   // In-app sharing path (no email): generate an approval link you can copy/share via WhatsApp/SMS.

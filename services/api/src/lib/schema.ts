@@ -64,22 +64,61 @@ export async function initSchemaAndSeed() {
   `);
 
   // Seed a first tenant + admin if none exist.
-  const tenantRows = await pool.query("SELECT id FROM tenants LIMIT 1");
-  const hasTenant = (tenantRows.rowCount ?? 0) > 0;
-  if (hasTenant) return;
-
-  const tenantId = randomUUID();
-  const userId = randomUUID();
   const now = new Date();
-  const hash = await bcrypt.hash(env.SEED_ADMIN_PASSWORD, 10);
+  const tenantRow = await pool.query("SELECT id FROM tenants ORDER BY created_at ASC LIMIT 1");
+  let tenantId: string;
 
-  await pool.query("INSERT INTO tenants (id, name, created_at) VALUES ($1, $2, $3)", [
-    tenantId,
-    env.SEED_TENANT_NAME,
-    now
-  ]);
-  await pool.query(
-    "INSERT INTO users (id, tenant_id, email, password_hash, role, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
-    [userId, tenantId, env.SEED_ADMIN_EMAIL.toLowerCase(), hash, "admin", now]
-  );
+  if ((tenantRow.rowCount ?? 0) === 0) {
+    tenantId = randomUUID();
+    await pool.query("INSERT INTO tenants (id, name, created_at) VALUES ($1, $2, $3)", [
+      tenantId,
+      env.SEED_TENANT_NAME,
+      now
+    ]);
+  } else {
+    tenantId = tenantRow.rows[0].id as string;
+  }
+
+  // Admin (idempotent)
+  {
+    const userId = randomUUID();
+    const hash = await bcrypt.hash(env.SEED_ADMIN_PASSWORD, 10);
+    await pool.query(
+      `INSERT INTO users (id, tenant_id, email, password_hash, role, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (email) DO NOTHING`,
+      [userId, tenantId, env.SEED_ADMIN_EMAIL.toLowerCase(), hash, "admin", now]
+    );
+  }
+
+  // Optional: director seed (idempotent)
+  if (env.SEED_DIRECTOR_EMAIL && env.SEED_DIRECTOR_PASSWORD) {
+    const directorId = randomUUID();
+    const directorHash = await bcrypt.hash(env.SEED_DIRECTOR_PASSWORD, 10);
+    await pool.query(
+      `INSERT INTO users (id, tenant_id, email, password_hash, role, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (email) DO NOTHING`,
+      [
+        directorId,
+        tenantId,
+        env.SEED_DIRECTOR_EMAIL.toLowerCase(),
+        directorHash,
+        "director",
+        now
+      ]
+    );
+  }
+
+  // Optional: salesperson seed (idempotent)
+  if (env.SEED_SALES_EMAIL && env.SEED_SALES_PASSWORD) {
+    const salesId = randomUUID();
+    const salesHash = await bcrypt.hash(env.SEED_SALES_PASSWORD, 10);
+    await pool.query(
+      `INSERT INTO users (id, tenant_id, email, password_hash, role, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (email) DO NOTHING`,
+      [salesId, tenantId, env.SEED_SALES_EMAIL.toLowerCase(), salesHash, "sales", now]
+    );
+  }
 }

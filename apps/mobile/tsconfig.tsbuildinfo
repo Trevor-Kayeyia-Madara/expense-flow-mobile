@@ -1,1 +1,1 @@
-{"root":["./src/main.tsx","./src/ui/app.tsx","./src/ui/expenseform.tsx","./src/ui/expenseslist.tsx","./src/ui/login.tsx"],"version":"5.9.3"}
+{"root":["./src/main.tsx","./src/ui/app.tsx","./src/ui/directorpanel.tsx","./src/ui/expenseform.tsx","./src/ui/expenseslist.tsx","./src/ui/login.tsx"],"version":"5.9.3"}
