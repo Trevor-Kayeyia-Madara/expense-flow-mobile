@@ -227,7 +227,7 @@ export const expensesRoutes: FastifyPluginAsync = async (app) => {
     if (directorEmail) {
       if (!isMailConfigured()) {
         // Still return a usable link (share via WhatsApp/SMS) even if SMTP isn't set up.
-        return { ok: true, approvalUrl, expiresAt, emailed: false, reason: "SMTP not configured" };
+        return { ok: true, approvalUrl, expiresAt, emailed: false, reason: "Email provider not configured" };
       }
       const result = await sendMail({
         to: directorEmail,

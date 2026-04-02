@@ -2,7 +2,6 @@ import nodemailer from "nodemailer";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import sgMail from "@sendgrid/mail";
-import { Resend } from "resend";
 import { env } from "./env";
 
 type MailInput = {
@@ -15,7 +14,7 @@ type MailInput = {
 };
 
 type MailSendResult = {
-  provider: "smtp" | "sendgrid" | "resend";
+  provider: "smtp" | "sendgrid" | "mailtrap";
   id?: string;
   messageId?: string;
 };
@@ -23,14 +22,13 @@ type MailSendResult = {
 let transporter: nodemailer.Transporter | null = null;
 let verified = false;
 let sendGridReady = false;
-let resendClient: Resend | null = null;
 
 export function isMailConfigured() {
   if (env.MAIL_PROVIDER === "sendgrid") {
     return !!(env.SENDGRID_API_KEY && (env.SENDGRID_FROM || env.SMTP_FROM));
   }
-  if (env.MAIL_PROVIDER === "resend") {
-    return !!(env.RESEND_API_KEY && (env.RESEND_FROM || env.SMTP_FROM));
+  if (env.MAIL_PROVIDER === "mailtrap") {
+    return !!(env.MAILTRAP_TOKEN && env.MAILTRAP_FROM_EMAIL);
   }
   return !!(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS && env.SMTP_FROM);
 }
@@ -41,8 +39,8 @@ function getTransporter() {
     throw new Error(
       env.MAIL_PROVIDER === "sendgrid"
         ? "SendGrid is not configured (set SENDGRID_API_KEY and SENDGRID_FROM)"
-        : env.MAIL_PROVIDER === "resend"
-          ? "Resend is not configured (set RESEND_API_KEY and RESEND_FROM)"
+        : env.MAIL_PROVIDER === "mailtrap"
+          ? "Mailtrap is not configured (set MAILTRAP_TOKEN and MAILTRAP_FROM_EMAIL)"
         : "SMTP is not configured (set SMTP_HOST/SMTP_USER/SMTP_PASS/SMTP_FROM)"
     );
   }
@@ -91,24 +89,45 @@ export async function sendMail(input: MailInput): Promise<MailSendResult> {
     return { provider: "sendgrid" };
   }
 
-  if (env.MAIL_PROVIDER === "resend") {
-    if (!env.RESEND_API_KEY) throw new Error("Resend not configured (RESEND_API_KEY missing)");
-    if (!resendClient) resendClient = new Resend(env.RESEND_API_KEY);
+  if (env.MAIL_PROVIDER === "mailtrap") {
+    if (!env.MAILTRAP_TOKEN) throw new Error("Mailtrap not configured (MAILTRAP_TOKEN missing)");
+    if (!env.MAILTRAP_FROM_EMAIL)
+      throw new Error("Mailtrap not configured (MAILTRAP_FROM_EMAIL missing)");
 
-    const from = input.from ?? env.RESEND_FROM ?? env.SMTP_FROM;
-    if (!from) throw new Error("Resend from address missing (set RESEND_FROM)");
+    const fromEmail = (input.from && extractEmail(input.from)) || env.MAILTRAP_FROM_EMAIL;
+    const fromName = (input.from && extractName(input.from)) || env.MAILTRAP_FROM_NAME || "ExpenseFlow";
 
-    const res = await resendClient.emails.send({
-      from,
-      to: input.to,
+    const payload = {
+      from: { email: fromEmail, name: fromName },
+      to: [{ email: input.to }],
       subject: input.subject,
       text: input.text,
       html: input.html,
-      replyTo: input.replyTo
+      // Mailtrap uses reply_to as an object, not a list, but accepts both in some SDKs.
+      reply_to: input.replyTo ? { email: input.replyTo } : undefined
+    };
+
+    const res = await fetch("https://send.api.mailtrap.io/api/send", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.MAILTRAP_TOKEN}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(payload)
     });
-    const anyRes = res as any;
-    const id = anyRes?.data?.id ?? anyRes?.id;
-    return { provider: "resend", id };
+
+    const text = await res.text();
+    if (!res.ok) throw new Error(text || `Mailtrap send failed (HTTP ${res.status})`);
+
+    let id: string | undefined;
+    try {
+      const json = JSON.parse(text) as any;
+      id = typeof json?.message_id === "string" ? json.message_id : undefined;
+    } catch {
+      // ignore
+    }
+
+    return { provider: "mailtrap", id };
   }
 
   const tx = getTransporter();
@@ -125,4 +144,18 @@ export async function sendMail(input: MailInput): Promise<MailSendResult> {
     html: input.html
   });
   return { provider: "smtp", messageId: (info as any)?.messageId };
+}
+
+function extractEmail(from: string): string | undefined {
+  const match = from.match(/<([^>]+)>/);
+  if (match?.[1]) return match[1].trim();
+  if (from.includes("@") && !from.includes(" ")) return from.trim();
+  return undefined;
+}
+
+function extractName(from: string): string | undefined {
+  const match = from.match(/^(.*)<[^>]+>/);
+  const name = match?.[1]?.trim();
+  if (!name) return undefined;
+  return name.replaceAll(/^"|"$/g, "").trim() || undefined;
 }

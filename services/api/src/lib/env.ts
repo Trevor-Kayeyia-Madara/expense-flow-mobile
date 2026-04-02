@@ -6,16 +6,17 @@ const schema = z.object({
 
   PUBLIC_BASE_URL: z.string().default("http://localhost:4000"),
 
-  // Mail provider: "smtp" (default), "sendgrid", or "resend"
-  MAIL_PROVIDER: z.enum(["smtp", "sendgrid", "resend"]).default("smtp"),
+  // Mail provider: "smtp" (default), "sendgrid", or "mailtrap"
+  MAIL_PROVIDER: z.enum(["smtp", "sendgrid", "mailtrap"]).default("smtp"),
 
   // SendGrid
   SENDGRID_API_KEY: z.string().optional().default(""),
   SENDGRID_FROM: z.string().optional().default(""),
 
-  // Resend
-  RESEND_API_KEY: z.string().optional().default(""),
-  RESEND_FROM: z.string().optional().default(""),
+  // Mailtrap (Email Sending API)
+  MAILTRAP_TOKEN: z.string().optional().default(""),
+  MAILTRAP_FROM_EMAIL: z.string().optional().default(""),
+  MAILTRAP_FROM_NAME: z.string().optional().default("ExpenseFlow"),
 
   SMTP_HOST: z.string().default(""),
   SMTP_PORT: z.coerce.number().int().positive().default(465),
@@ -62,10 +63,11 @@ const normalizedEnv = {
   ...process.env,
   // Allow common lowercase env names too (dotenv files are user-edited).
   MAIL_PROVIDER: process.env.MAIL_PROVIDER ?? process.env.mail_provider,
-  RESEND_API_KEY: process.env.RESEND_API_KEY ?? process.env.resend_api_key,
-  RESEND_FROM: process.env.RESEND_FROM ?? process.env.resend_from,
   SENDGRID_API_KEY: process.env.SENDGRID_API_KEY ?? process.env.sendgrid_api_key,
   SENDGRID_FROM: process.env.SENDGRID_FROM ?? process.env.sendgrid_from,
+  MAILTRAP_TOKEN: process.env.MAILTRAP_TOKEN ?? process.env.mailtrap_token,
+  MAILTRAP_FROM_EMAIL: process.env.MAILTRAP_FROM_EMAIL ?? process.env.mailtrap_from_email,
+  MAILTRAP_FROM_NAME: process.env.MAILTRAP_FROM_NAME ?? process.env.mailtrap_from_name,
   SEED_DIRECTOR_EMAIL: process.env.SEED_DIRECTOR_EMAIL ?? process.env.seed_director_email,
   SEED_DIRECTOR_PASSWORD: process.env.SEED_DIRECTOR_PASSWORD ?? process.env.seed_director_password,
   SEED_SALES_EMAIL: process.env.SEED_SALES_EMAIL ?? process.env.seed_sales_email,

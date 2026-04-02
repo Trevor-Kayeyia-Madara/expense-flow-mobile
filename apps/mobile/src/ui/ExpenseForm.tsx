@@ -147,7 +147,7 @@ export function ExpenseForm(props: {
                   } else {
                     const to = res.emailedTo ? ` to ${res.emailedTo}` : "";
                     const id = res.mailId ? ` (${res.mailId})` : "";
-                    const msg = `Approval email sent${to}${id}.`;
+                    const msg = `Approval email queued${to}${id}.`;
                     setEmailMsg(msg);
                     props.onNotify?.(msg, "success");
                   }
@@ -239,7 +239,7 @@ export function ExpenseForm(props: {
                 } else {
                   const to = approval.emailedTo ? ` to ${approval.emailedTo}` : "";
                   const id = approval.mailId ? ` (${approval.mailId})` : "";
-                  const msg = `Approval email sent${to}${id}.`;
+                  const msg = `Approval email queued${to}${id}.`;
                   setAutoEmailMsg(msg);
                   props.onNotify?.(msg, "success");
                 }
