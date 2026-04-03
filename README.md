@@ -112,6 +112,11 @@ Configure environment variables (do not commit `.env` files):
 - `services/api/.env`: DB connection, `PUBLIC_BASE_URL`, `APP_BASE_URL`, `ORIGIN`, mail provider settings
 - `apps/mobile/.env`: `VITE_API_BASE_URL`
 
+Managed Postgres often requires SSL/TLS:
+
+- Set `DB_SSL=true`
+- If your provider uses a non-standard chain, set `DB_SSL_REJECT_UNAUTHORIZED=false`
+
 ## Live Demo
 
 - (Add link here)

@@ -50,6 +50,10 @@ const schema = z.object({
     .union([z.literal("true"), z.literal("false")])
     .transform((v) => v === "true")
     .default("false"),
+  DB_SSL_REJECT_UNAUTHORIZED: z
+    .union([z.literal("true"), z.literal("false")])
+    .transform((v) => v === "true")
+    .default("true"),
 
   UPLOAD_DIR: z.string().default("./uploads"),
 });
