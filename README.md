@@ -1,65 +1,117 @@
-# ExpenseFlow (V1 MVP)
+# ExpenseFlow (Mobile‑First, Multi‑Tenant Expense Approvals)
 
-Multi-tenant, domain-based expense management system with email-driven director approvals and finance-ready exports.
+## Problem
 
-## Repo layout
+Field teams submit expenses with paper receipts, approvals happen late (or not at all), and finance spends time chasing people instead of closing books. There’s no clean audit trail and visibility is poor.
 
-- `apps/mobile` - Mobile-first PWA (React + Vite)
-- `services/api` - Backend API (Fastify + PostgreSQL + local uploads)
-- `packages/shared` - Shared types/schemas (placeholder)
+## Solution
 
-## Prereqs
+ExpenseFlow is a cloud-based, multi-tenant expense management system that supports fast expense submission (receipt + details), email-driven director approvals (no login needed), and a finance-ready queue with export.
+
+## Features
+
+- Auth (JWT + refresh tokens)
+- Role-based access (Super Admin, Company Admin, Sales, Director, Finance)
+- Multi-tenant company isolation (company/domain-based)
+- Expense submission (draft → submitted) + receipt upload
+- Email-driven approvals (Approve/Reject/Open details via PWA, token-based)
+- Finance queue (approved → verified → posted) + CSV export
+- Audit logs + in-app notifications
+
+## Tech Stack
+
+- React (PWA)
+- Tailwind CSS
+- Vite
+- Node.js (Fastify)
+- PostgreSQL
+- Email: Mailtrap / SMTP / SendGrid (provider-switchable)
+
+## Architecture
+
+Flow:
+
+PWA → API → PostgreSQL (+ receipt storage + email provider)
+
+```mermaid
+flowchart LR
+  PWA[PWA (React + Tailwind + Vite)] -->|HTTPS JSON + multipart| API[API (Node.js + Fastify)]
+  API --> DB[(PostgreSQL)]
+  API --> Storage[(Receipt files: local uploads / S3 later)]
+  API --> Mail[Email provider (Mailtrap / SMTP / SendGrid)]
+```
+
+## Screenshots
+
+Add 3–5 images here (place in `docs/screenshots/`):
+
+- `docs/screenshots/login.png`
+- `docs/screenshots/sales-new-expense.png`
+- `docs/screenshots/sales-expenses.png`
+- `docs/screenshots/director-approval.png`
+- `docs/screenshots/finance-queue.png`
+
+## API Example
+
+Create an expense (multipart with receipt):
+
+```http
+POST /expenses
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+
+amount=4500
+currency=KES
+category=Meals
+description=lunch at kempinski
+receipt=<file>
+```
+
+Submit for approval (triggers director email):
+
+```http
+POST /expenses/:id/submit
+Authorization: Bearer <token>
+```
+
+## Setup
+
+Prereqs:
 
 - Node.js 20+ recommended
-- Postgres (local via Docker or managed in cloud)
+- Docker (optional, for local Postgres)
 
-## Quick start (dev)
+1) Start PostgreSQL (Docker)
 
-In two terminals:
-
-Optional: start Postgres locally (Docker)
 ```powershell
 cd expenseflow-mobile-first
 docker compose up -d db
 ```
 
-1) API
+2) Install deps (repo root)
+
 ```powershell
-cd services/api
+cd expenseflow-mobile-first
 npm install
-npm run dev
 ```
 
-2) Mobile PWA (optional)
+3) Run API
+
 ```powershell
-cd apps/mobile
-npm install
-npm run dev
+npm -w services/api run dev
 ```
 
-Then open the Vite URL on your phone (same Wi-Fi) or use device emulation in your browser.
+4) Run Mobile PWA
 
-## V1 MVP scope (baseline)
+```powershell
+npm -w apps/mobile run dev
+```
 
-- Multi-tenant companies (domain-based isolation)
-- Auth (JWT + refresh tokens) + RBAC (Super Admin / Company Admin / Sales / Director / Finance)
-- Expense submission + receipt upload
-- Director approvals via email links (`/approval/approve|reject?token=...`)
-- Finance queue + CSV export
+Configure environment variables (do not commit `.env` files):
 
-## Next build steps
+- `services/api/.env`: DB connection, `PUBLIC_BASE_URL`, `APP_BASE_URL`, `ORIGIN`, mail provider settings
+- `apps/mobile/.env`: `VITE_API_BASE_URL`
 
-- OCR (V2)
-- Better notifications (email + delivery events)
-- Advanced reporting
+## Live Demo
 
-## Email (optional)
-
-The API sends the director an email when a sales user submits an expense (Approve/Reject links inside).
-
-Mailtrap (Email Sending API) envs in `services/api/.env`:
-
-- `MAIL_PROVIDER=mailtrap`
-- `MAILTRAP_TOKEN=...`
-- `MAILTRAP_FROM_EMAIL=...`
-- `MAILTRAP_FROM_NAME=ExpenseFlow`
+- (Add link here)

@@ -9,7 +9,6 @@ import { z } from "zod";
 import { env } from "./lib/env";
 import { initPostgres } from "./lib/pg";
 import { migrate } from "./lib/migrate";
-import { seed } from "./lib/seed";
 import { authRoutes } from "./routes/auth";
 import { expensesRoutes } from "./routes/expenses";
 import { usersRoutes } from "./routes/users";
@@ -57,7 +56,6 @@ async function main() {
   mkdirSync(resolve(env.UPLOAD_DIR), { recursive: true });
   await initPostgres();
   await migrate();
-  await seed();
 
   app.get("/health", async () => ({ ok: true }));
 

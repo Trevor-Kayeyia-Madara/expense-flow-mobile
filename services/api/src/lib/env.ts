@@ -52,25 +52,6 @@ const schema = z.object({
     .default("false"),
 
   UPLOAD_DIR: z.string().default("./uploads"),
-
-  // Seed (local dev)
-  SEED_COMPANY_NAME: z.string().default("Demo Company"),
-  SEED_COMPANY_DOMAIN: z.string().default("demo.local"),
-
-  SEED_SUPER_ADMIN_EMAIL: z.union([z.string().email(), z.literal("")]).default(""),
-  SEED_SUPER_ADMIN_PASSWORD: z.string().optional().default(""),
-
-  SEED_COMPANY_ADMIN_EMAIL: z.union([z.string().email(), z.literal("")]).default(""),
-  SEED_COMPANY_ADMIN_PASSWORD: z.string().optional().default(""),
-
-  SEED_DIRECTOR_EMAIL: z.union([z.string().email(), z.literal("")]).default(""),
-  SEED_DIRECTOR_PASSWORD: z.string().optional().default(""),
-
-  SEED_SALES_EMAIL: z.union([z.string().email(), z.literal("")]).default(""),
-  SEED_SALES_PASSWORD: z.string().optional().default(""),
-
-  SEED_FINANCE_EMAIL: z.union([z.string().email(), z.literal("")]).default(""),
-  SEED_FINANCE_PASSWORD: z.string().optional().default("")
 });
 
 const normalizedEnv = {
@@ -84,24 +65,6 @@ const normalizedEnv = {
   MAILTRAP_TOKEN: process.env.MAILTRAP_TOKEN ?? process.env.mailtrap_token,
   MAILTRAP_FROM_EMAIL: process.env.MAILTRAP_FROM_EMAIL ?? process.env.mailtrap_from_email,
   MAILTRAP_FROM_NAME: process.env.MAILTRAP_FROM_NAME ?? process.env.mailtrap_from_name,
-  SEED_COMPANY_NAME: process.env.SEED_COMPANY_NAME ?? process.env.seed_company_name ?? process.env.SEED_TENANT_NAME,
-  SEED_COMPANY_DOMAIN:
-    process.env.SEED_COMPANY_DOMAIN ?? process.env.seed_company_domain ?? process.env.SEED_TENANT_DOMAIN,
-  SEED_DIRECTOR_EMAIL: process.env.SEED_DIRECTOR_EMAIL ?? process.env.seed_director_email,
-  SEED_DIRECTOR_PASSWORD: process.env.SEED_DIRECTOR_PASSWORD ?? process.env.seed_director_password,
-  SEED_SALES_EMAIL: process.env.SEED_SALES_EMAIL ?? process.env.seed_sales_email,
-  SEED_SALES_PASSWORD: process.env.SEED_SALES_PASSWORD ?? process.env.seed_sales_password,
-  SEED_SUPER_ADMIN_EMAIL: process.env.SEED_SUPER_ADMIN_EMAIL ?? process.env.seed_super_admin_email,
-  SEED_SUPER_ADMIN_PASSWORD:
-    process.env.SEED_SUPER_ADMIN_PASSWORD ?? process.env.seed_super_admin_password,
-  SEED_COMPANY_ADMIN_EMAIL:
-    process.env.SEED_COMPANY_ADMIN_EMAIL ?? process.env.seed_company_admin_email ?? process.env.SEED_ADMIN_EMAIL,
-  SEED_COMPANY_ADMIN_PASSWORD:
-    process.env.SEED_COMPANY_ADMIN_PASSWORD ??
-    process.env.seed_company_admin_password ??
-    process.env.SEED_ADMIN_PASSWORD,
-  SEED_FINANCE_EMAIL: process.env.SEED_FINANCE_EMAIL ?? process.env.seed_finance_email,
-  SEED_FINANCE_PASSWORD: process.env.SEED_FINANCE_PASSWORD ?? process.env.seed_finance_password
 };
 
 export const env = schema.parse(normalizedEnv);

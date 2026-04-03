@@ -5,9 +5,10 @@ import { Login } from "./Login";
 import { ExpenseForm } from "./ExpenseForm";
 import { ExpensesList } from "./ExpensesList";
 import { FinanceQueue } from "./FinanceQueue";
-import { UsersAdmin } from "./UsersAdmin";
 import { CompaniesAdmin } from "./CompaniesAdmin";
 import { ApprovalFromEmail } from "./ApprovalFromEmail";
+import { CompanyAdmin } from "./CompanyAdmin";
+import { SuperAdmin } from "./SuperAdmin";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "";
 
@@ -150,9 +151,9 @@ export default function App() {
         ) : !isApprovalLink && role === "finance" ? (
           <FinanceQueue api={api} onNotify={notify} />
         ) : !isApprovalLink && role === "company_admin" ? (
-          <UsersAdmin api={api} onNotify={notify} />
+          <CompanyAdmin api={api} onNotify={notify} />
         ) : !isApprovalLink && role === "super_admin" ? (
-          <CompaniesAdmin api={api} onNotify={notify} />
+          <SuperAdmin api={api} onNotify={notify} />
         ) : !isApprovalLink && role === "director" ? (
           <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <h1 className="text-[18px] font-extrabold tracking-tight">Director approvals</h1>

@@ -393,13 +393,32 @@ export const expensesRoutes: FastifyPluginAsync = async (app) => {
       const directorRow = await client.query(
         `SELECT id, email
          FROM users
-         WHERE company_id = $1 AND role = 'director' AND is_active = true
-         ORDER BY created_at ASC
+         WHERE id = (
+           SELECT default_director_id
+           FROM companies
+           WHERE id = $1
+         )
+         AND company_id = $1
+         AND role = 'director'
+         AND is_active = true
          LIMIT 1`,
         [companyId]
       );
-      if (!directorRow.rowCount) throw new Error("No director configured for this company");
-      const director = directorRow.rows[0] as { id: string; email: string };
+      let director: { id: string; email: string } | null =
+        directorRow.rowCount ? (directorRow.rows[0] as { id: string; email: string }) : null;
+
+      if (!director) {
+        const fallback = await client.query(
+          `SELECT id, email
+           FROM users
+           WHERE company_id = $1 AND role = 'director' AND is_active = true
+           ORDER BY created_at ASC
+           LIMIT 1`,
+          [companyId]
+        );
+        if (!fallback.rowCount) throw new Error("No director configured for this company");
+        director = fallback.rows[0] as { id: string; email: string };
+      }
 
       const now = new Date();
       await client.query(

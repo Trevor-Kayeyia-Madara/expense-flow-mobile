@@ -15,6 +15,14 @@ export type MeResponse = { userId: string; companyId: string; role: string; emai
 
 export type ExpenseStatus = "draft" | "submitted" | "approved" | "rejected" | "verified" | "posted";
 
+export type CompanyMe = {
+  id: string;
+  name: string;
+  domain: string;
+  defaultDirectorId: string | null;
+  createdAt: string;
+};
+
 export type ApprovalTokenView = {
   token: string;
   companyId: string;
@@ -220,7 +228,14 @@ export class ApiClient {
     };
   }
 
-  async createUser(input: { name?: string; email: string; password: string; role: string; isActive?: boolean }) {
+  async createUser(input: {
+    name?: string;
+    email: string;
+    password: string;
+    role: string;
+    isActive?: boolean;
+    companyId?: string;
+  }) {
     const res = await this.request(`/users`, {
       method: "POST",
       headers: this.headers({ "content-type": "application/json" }),
@@ -244,6 +259,22 @@ export class ApiClient {
     });
     if (!res.ok) throw new Error(await safeText(res));
     return (await res.json()) as { id: string };
+  }
+
+  async companyMe(): Promise<CompanyMe> {
+    const res = await this.request(`/companies/me`, { method: "GET", headers: this.headers() });
+    if (!res.ok) throw new Error(await safeText(res));
+    return (await res.json()) as CompanyMe;
+  }
+
+  async updateCompanyMe(input: { name?: string; domain?: string; defaultDirectorId?: string | null }) {
+    const res = await this.request(`/companies/me`, {
+      method: "PATCH",
+      headers: this.headers({ "content-type": "application/json" }),
+      body: JSON.stringify(input)
+    });
+    if (!res.ok) throw new Error(await safeText(res));
+    return (await res.json()) as { ok: true };
   }
 
   async approvalTokenView(token: string): Promise<ApprovalTokenView> {
