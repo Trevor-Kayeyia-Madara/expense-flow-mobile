@@ -88,20 +88,20 @@ cd expenseflow-mobile-first
 docker compose up -d db
 ```
 
-2) Install deps (repo root)
+1) Install deps (repo root)
 
 ```powershell
 cd expenseflow-mobile-first
 npm install
 ```
 
-3) Run API
+1) Run API
 
 ```powershell
 npm -w services/api run dev
 ```
 
-4) Run Mobile PWA
+1) Run Mobile PWA
 
 ```powershell
 npm -w apps/mobile run dev
