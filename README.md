@@ -1,6 +1,6 @@
-# ExpenseFlow (Mobile-First MVP)
+# ExpenseFlow (V1 MVP)
 
-Mobile-first PWA + backend API designed for fast field submissions (receipt + amount + description).
+Multi-tenant, domain-based expense management system with email-driven director approvals and finance-ready exports.
 
 ## Repo layout
 
@@ -26,48 +26,40 @@ docker compose up -d db
 1) API
 ```powershell
 cd services/api
-copy .env.example .env
 npm install
 npm run dev
 ```
 
-2) Mobile PWA
+2) Mobile PWA (optional)
 ```powershell
 cd apps/mobile
-copy .env.example .env
 npm install
 npm run dev
 ```
 
 Then open the Vite URL on your phone (same Wi-Fi) or use device emulation in your browser.
 
-## What's included (MVP baseline)
+## V1 MVP scope (baseline)
 
-- Login that stores a token (session remembered)
-- Create expense in ~15-30 seconds:
-  - "New Expense"
-  - Camera/gallery receipt
-  - Amount + description
-  - Submit
-- Image compression on-device (to reduce data usage)
-- `POST /expenses` multipart upload + Postgres persistence + local file storage
+- Multi-tenant companies (domain-based isolation)
+- Auth (JWT + refresh tokens) + RBAC (Super Admin / Company Admin / Sales / Director / Finance)
+- Expense submission + receipt upload
+- Director approvals via email links (`/approval/approve|reject?token=...`)
+- Finance queue + CSV export
 
 ## Next build steps
 
-- Approval flow (tokenized email links)
-- Status tracking + director view
-- Better offline drafts (service worker + IndexedDB)
+- OCR (V2)
+- Better notifications (email + delivery events)
+- Advanced reporting
 
-## SMTP (Gmail test)
+## Email (optional)
 
-For Gmail, use an **App Password** (not your normal password).
+The API sends the director an email when a sales user submits an expense (Approve/Reject links inside).
 
-Set these in `services/api/.env`:
+Mailtrap (Email Sending API) envs in `services/api/.env`:
 
-- `PUBLIC_BASE_URL` - base URL used in the emailed approval link (use your LAN IP for phone testing)
-- `SMTP_HOST=smtp.gmail.com`
-- `SMTP_PORT=465`
-- `SMTP_SECURE=true`
-- `SMTP_USER=yourgmail@gmail.com`
-- `SMTP_PASS=your_app_password`
-- `SMTP_FROM="ExpenseFlow <yourgmail@gmail.com>"`
+- `MAIL_PROVIDER=mailtrap`
+- `MAILTRAP_TOKEN=...`
+- `MAILTRAP_FROM_EMAIL=...`
+- `MAILTRAP_FROM_NAME=ExpenseFlow`

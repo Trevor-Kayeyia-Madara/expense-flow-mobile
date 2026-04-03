@@ -10,6 +10,10 @@
     "dev": "npm -w services/api run dev",
     "dev:mobile": "npm -w apps/mobile run dev",
     "dev:api": "npm -w services/api run dev"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.2.2",
+    "enhanced-resolve": "^5.20.1",
+    "tailwindcss": "^4.2.2"
   }
 }
-

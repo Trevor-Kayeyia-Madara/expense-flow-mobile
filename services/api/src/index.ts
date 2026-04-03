@@ -8,12 +8,14 @@ import { resolve } from "node:path";
 import { z } from "zod";
 import { env } from "./lib/env";
 import { initPostgres } from "./lib/pg";
-import { initSchemaAndSeed } from "./lib/schema";
+import { migrate } from "./lib/migrate";
+import { seed } from "./lib/seed";
 import { authRoutes } from "./routes/auth";
-import { approvalsRoutes } from "./routes/approvals";
 import { expensesRoutes } from "./routes/expenses";
-import { adminRoutes } from "./routes/admin";
-import { directorRoutes } from "./routes/director";
+import { usersRoutes } from "./routes/users";
+import { financeRoutes } from "./routes/finance";
+import { companiesRoutes } from "./routes/companies";
+import { approvalEmailRoutes } from "./routes/approvalEmail";
 
 async function main() {
   const app = Fastify({ logger: true });
@@ -54,15 +56,17 @@ async function main() {
 
   mkdirSync(resolve(env.UPLOAD_DIR), { recursive: true });
   await initPostgres();
-  await initSchemaAndSeed();
+  await migrate();
+  await seed();
 
   app.get("/health", async () => ({ ok: true }));
 
   await app.register(authRoutes, { prefix: "/auth" });
+  await app.register(companiesRoutes, { prefix: "/companies" });
+  await app.register(usersRoutes, { prefix: "/users" });
   await app.register(expensesRoutes, { prefix: "/expenses" });
-  await app.register(approvalsRoutes, { prefix: "/approvals" });
-  await app.register(adminRoutes, { prefix: "/admin" });
-  await app.register(directorRoutes, { prefix: "/director" });
+  await app.register(approvalEmailRoutes, { prefix: "/approval" });
+  await app.register(financeRoutes, { prefix: "/finance" });
 
   const listenSchema = z.object({
     PORT: z.coerce.number().min(1).max(65535).default(4000),

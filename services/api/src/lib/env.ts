@@ -5,9 +5,14 @@ const schema = z.object({
   JWT_SECRET: z.string().min(16).default("dev-secret-change-me-please-change"),
 
   PUBLIC_BASE_URL: z.string().default("http://localhost:4000"),
+  // Public URL of the web app (PWA). Used for "Open details" links in approval emails.
+  APP_BASE_URL: z.string().default("http://localhost:5173"),
 
   // Mail provider: "smtp" (default), "sendgrid", or "mailtrap"
   MAIL_PROVIDER: z.enum(["smtp", "sendgrid", "mailtrap"]).default("smtp"),
+  // Controls whether emails can set the actor (sales/director) as the `from` address.
+  // Most providers require the domain to be authenticated (SPF/DKIM) for this to work.
+  MAIL_FROM_MODE: z.enum(["system", "actor"]).default("system"),
 
   // SendGrid
   SENDGRID_API_KEY: z.string().optional().default(""),
@@ -48,30 +53,55 @@ const schema = z.object({
 
   UPLOAD_DIR: z.string().default("./uploads"),
 
-  SEED_TENANT_NAME: z.string().default("Demo Company"),
-  SEED_ADMIN_EMAIL: z.string().email().default("admin@demo.local"),
-  SEED_ADMIN_PASSWORD: z.string().min(8).default("admin1234"),
+  // Seed (local dev)
+  SEED_COMPANY_NAME: z.string().default("Demo Company"),
+  SEED_COMPANY_DOMAIN: z.string().default("demo.local"),
+
+  SEED_SUPER_ADMIN_EMAIL: z.union([z.string().email(), z.literal("")]).default(""),
+  SEED_SUPER_ADMIN_PASSWORD: z.string().optional().default(""),
+
+  SEED_COMPANY_ADMIN_EMAIL: z.union([z.string().email(), z.literal("")]).default(""),
+  SEED_COMPANY_ADMIN_PASSWORD: z.string().optional().default(""),
 
   SEED_DIRECTOR_EMAIL: z.union([z.string().email(), z.literal("")]).default(""),
   SEED_DIRECTOR_PASSWORD: z.string().optional().default(""),
 
   SEED_SALES_EMAIL: z.union([z.string().email(), z.literal("")]).default(""),
-  SEED_SALES_PASSWORD: z.string().optional().default("")
+  SEED_SALES_PASSWORD: z.string().optional().default(""),
+
+  SEED_FINANCE_EMAIL: z.union([z.string().email(), z.literal("")]).default(""),
+  SEED_FINANCE_PASSWORD: z.string().optional().default("")
 });
 
 const normalizedEnv = {
   ...process.env,
   // Allow common lowercase env names too (dotenv files are user-edited).
+  APP_BASE_URL: process.env.APP_BASE_URL ?? process.env.app_base_url ?? process.env.PUBLIC_APP_URL ?? process.env.public_app_url,
   MAIL_PROVIDER: process.env.MAIL_PROVIDER ?? process.env.mail_provider,
+  MAIL_FROM_MODE: process.env.MAIL_FROM_MODE ?? process.env.mail_from_mode,
   SENDGRID_API_KEY: process.env.SENDGRID_API_KEY ?? process.env.sendgrid_api_key,
   SENDGRID_FROM: process.env.SENDGRID_FROM ?? process.env.sendgrid_from,
   MAILTRAP_TOKEN: process.env.MAILTRAP_TOKEN ?? process.env.mailtrap_token,
   MAILTRAP_FROM_EMAIL: process.env.MAILTRAP_FROM_EMAIL ?? process.env.mailtrap_from_email,
   MAILTRAP_FROM_NAME: process.env.MAILTRAP_FROM_NAME ?? process.env.mailtrap_from_name,
+  SEED_COMPANY_NAME: process.env.SEED_COMPANY_NAME ?? process.env.seed_company_name ?? process.env.SEED_TENANT_NAME,
+  SEED_COMPANY_DOMAIN:
+    process.env.SEED_COMPANY_DOMAIN ?? process.env.seed_company_domain ?? process.env.SEED_TENANT_DOMAIN,
   SEED_DIRECTOR_EMAIL: process.env.SEED_DIRECTOR_EMAIL ?? process.env.seed_director_email,
   SEED_DIRECTOR_PASSWORD: process.env.SEED_DIRECTOR_PASSWORD ?? process.env.seed_director_password,
   SEED_SALES_EMAIL: process.env.SEED_SALES_EMAIL ?? process.env.seed_sales_email,
-  SEED_SALES_PASSWORD: process.env.SEED_SALES_PASSWORD ?? process.env.seed_sales_password
+  SEED_SALES_PASSWORD: process.env.SEED_SALES_PASSWORD ?? process.env.seed_sales_password,
+  SEED_SUPER_ADMIN_EMAIL: process.env.SEED_SUPER_ADMIN_EMAIL ?? process.env.seed_super_admin_email,
+  SEED_SUPER_ADMIN_PASSWORD:
+    process.env.SEED_SUPER_ADMIN_PASSWORD ?? process.env.seed_super_admin_password,
+  SEED_COMPANY_ADMIN_EMAIL:
+    process.env.SEED_COMPANY_ADMIN_EMAIL ?? process.env.seed_company_admin_email ?? process.env.SEED_ADMIN_EMAIL,
+  SEED_COMPANY_ADMIN_PASSWORD:
+    process.env.SEED_COMPANY_ADMIN_PASSWORD ??
+    process.env.seed_company_admin_password ??
+    process.env.SEED_ADMIN_PASSWORD,
+  SEED_FINANCE_EMAIL: process.env.SEED_FINANCE_EMAIL ?? process.env.seed_finance_email,
+  SEED_FINANCE_PASSWORD: process.env.SEED_FINANCE_PASSWORD ?? process.env.seed_finance_password
 };
 
 export const env = schema.parse(normalizedEnv);

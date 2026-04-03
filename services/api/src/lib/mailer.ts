@@ -11,6 +11,11 @@ type MailInput = {
   html?: string;
   from?: string;
   replyTo?: string;
+  attachments?: Array<{
+    filename: string;
+    contentType: string;
+    content: Buffer;
+  }>;
 };
 
 type MailSendResult = {
@@ -84,7 +89,15 @@ export async function sendMail(input: MailInput): Promise<MailSendResult> {
       subject: input.subject,
       text: input.text,
       html: input.html,
-      replyTo: input.replyTo
+      replyTo: input.replyTo,
+      attachments: input.attachments?.length
+        ? input.attachments.map((a) => ({
+            content: a.content.toString("base64"),
+            filename: a.filename,
+            type: a.contentType,
+            disposition: "attachment"
+          }))
+        : undefined
     });
     return { provider: "sendgrid" };
   }
@@ -104,7 +117,15 @@ export async function sendMail(input: MailInput): Promise<MailSendResult> {
       text: input.text,
       html: input.html,
       // Mailtrap uses reply_to as an object, not a list, but accepts both in some SDKs.
-      reply_to: input.replyTo ? { email: input.replyTo } : undefined
+      reply_to: input.replyTo ? { email: input.replyTo } : undefined,
+      attachments: input.attachments?.length
+        ? input.attachments.map((a) => ({
+            filename: a.filename,
+            content: a.content.toString("base64"),
+            type: a.contentType,
+            disposition: "attachment"
+          }))
+        : undefined
     };
 
     const res = await fetch("https://send.api.mailtrap.io/api/send", {
@@ -142,6 +163,14 @@ export async function sendMail(input: MailInput): Promise<MailSendResult> {
     subject: input.subject,
     text: input.text,
     html: input.html
+    ,
+    attachments: input.attachments?.length
+      ? input.attachments.map((a) => ({
+          filename: a.filename,
+          content: a.content,
+          contentType: a.contentType
+        }))
+      : undefined
   });
   return { provider: "smtp", messageId: (info as any)?.messageId };
 }
