@@ -51,6 +51,13 @@ Add 3–5 images here (place in `docs/screenshots/`):
 - `docs/screenshots/director-approval.png`
 - `docs/screenshots/finance-queue.png`
 
+How to add screenshots:
+
+1) Create the folder: `docs/screenshots/`
+2) Take screenshots (desktop browser or phone)
+3) Save them with the filenames above
+4) Commit and push
+
 ## API Example
 
 Create an expense (multipart with receipt):
@@ -120,3 +127,11 @@ Managed Postgres often requires SSL/TLS:
 ## Live Demo
 
 - (Add link here)
+
+## Demo Flow (2–3 minutes)
+
+1) **Login as Sales** → create an expense (attach receipt photo)
+2) Tap **Submit** → expense becomes `submitted`
+3) **Director receives email** → taps **Open details** (PWA opens, no login) → taps **Approve**
+4) Expense becomes `approved` and **Finance receives an email**
+5) **Login as Finance** → open Finance queue → **Verify** then **Post**
