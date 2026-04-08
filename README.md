@@ -44,10 +44,7 @@ Add 3–5 images in `docs/screenshots/` and reference them here:
 
 ```md
 ![Login](docs/screenshots/login.png)
-![New Expense](docs/screenshots/sales-new-expense.png)
-![My Expenses](docs/screenshots/sales-expenses.png)
-![Director Approval](docs/screenshots/director-approval.png)
-![Finance Queue](docs/screenshots/finance-queue.png)
+![Demo](docs/screenshots/image.png)
 ```
 
 ## API Example
@@ -133,4 +130,3 @@ Bootstrap (first Super Admin):
 4) Tap **Submit** → director gets an email with Approve/Reject/Open details
 5) **Director**: approve via email link (PWA opens, no login required)
 6) **Finance**: verify + post, then export CSV
-
