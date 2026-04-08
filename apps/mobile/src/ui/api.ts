@@ -318,6 +318,29 @@ export class ApiClient {
     return (await res.json()) as { id: string };
   }
 
+  async updateCompany(companyId: string, input: { name?: string; domain?: string }) {
+    const res = await this.request(`/companies/${companyId}`, {
+      method: "PATCH",
+      headers: this.headers({ "content-type": "application/json" }),
+      body: JSON.stringify(input)
+    });
+    if (!res.ok) throw new Error(await safeText(res));
+    return (await res.json()) as { ok: true };
+  }
+
+  async updateUser(
+    userId: string,
+    input: { name?: string | null; password?: string; role?: string; isActive?: boolean }
+  ) {
+    const res = await this.request(`/users/${userId}`, {
+      method: "PATCH",
+      headers: this.headers({ "content-type": "application/json" }),
+      body: JSON.stringify(input)
+    });
+    if (!res.ok) throw new Error(await safeText(res));
+    return (await res.json()) as { ok: true };
+  }
+
   async listNotifications(opts?: { unreadOnly?: boolean }) {
     const qs = new URLSearchParams();
     if (opts?.unreadOnly) qs.set("unread", "true");

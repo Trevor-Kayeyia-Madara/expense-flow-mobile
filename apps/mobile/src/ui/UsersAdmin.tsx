@@ -8,9 +8,9 @@ export function UsersAdmin(props: {
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [items, setItems] = useState<
-    Array<{ id: string; email: string; role: string; isActive: boolean; createdAt: string }>
-  >([]);
+  const [items, setItems] = useState<Array<{ id: string; email: string; role: string; isActive: boolean; createdAt: string }>>(
+    []
+  );
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -140,10 +140,64 @@ export function UsersAdmin(props: {
                 <div className="mt-1 text-[13px] font-semibold text-slate-600">
                   {u.isActive ? "Active" : "Disabled"} · {new Date(u.createdAt).toLocaleString()}
                 </div>
+                <div className="mt-2 truncate text-[12px] font-medium text-slate-400">ID: {u.id}</div>
               </div>
               <div className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[12px] font-bold text-slate-700">
                 {u.role}
               </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <button
+                className={cx(
+                  "rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[14px] font-extrabold text-slate-800 shadow-sm hover:bg-slate-50 active:bg-slate-100 disabled:opacity-60",
+                  busy ? "opacity-70" : ""
+                )}
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  setError(null);
+                  try {
+                    await props.api.updateUser(u.id, { isActive: !u.isActive });
+                    props.onNotify?.(u.isActive ? "User disabled." : "User enabled.", "success");
+                    await load();
+                  } catch (e) {
+                    const msg = e instanceof Error ? e.message : "Update failed";
+                    setError(msg);
+                    props.onNotify?.(msg, "error");
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                {u.isActive ? "Disable" : "Enable"}
+              </button>
+              <button
+                className={cx(
+                  "rounded-2xl bg-slate-900 px-4 py-3 text-[14px] font-extrabold text-white shadow-sm active:opacity-90 disabled:opacity-60",
+                  busy ? "opacity-70" : ""
+                )}
+                disabled={busy}
+                onClick={async () => {
+                  const newRole = window.prompt("Enter new role: sales | director | finance | company_admin", u.role);
+                  if (!newRole) return;
+                  setBusy(true);
+                  setError(null);
+                  try {
+                    await props.api.updateUser(u.id, { role: newRole });
+                    props.onNotify?.("Role updated.", "success");
+                    await load();
+                  } catch (e) {
+                    const msg = e instanceof Error ? e.message : "Update failed";
+                    setError(msg);
+                    props.onNotify?.(msg, "error");
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Change role
+              </button>
             </div>
           </div>
         ))}
