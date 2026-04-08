@@ -1,4 +1,4 @@
-# ExpenseFlow (Mobile‑First, Multi‑Tenant Expense Approvals)
+# ExpenseFlow
 
 ## Problem
 
@@ -20,18 +20,15 @@ ExpenseFlow is a cloud-based, multi-tenant expense management system that suppor
 
 ## Tech Stack
 
-- React (PWA)
+- React (PWA) + Vite
 - Tailwind CSS
-- Vite
 - Node.js (Fastify)
 - PostgreSQL
 - Email: Mailtrap / SMTP / SendGrid (provider-switchable)
 
 ## Architecture
 
-Flow:
-
-PWA → API → PostgreSQL (+ receipt storage + email provider)
+Frontend → Backend → DB:
 
 ```mermaid
 flowchart LR
@@ -43,20 +40,15 @@ flowchart LR
 
 ## Screenshots
 
-Add 3–5 images here (place in `docs/screenshots/`):
+Add 3–5 images in `docs/screenshots/` and reference them here:
 
-- `docs/screenshots/login.png`
-- `docs/screenshots/sales-new-expense.png`
-- `docs/screenshots/sales-expenses.png`
-- `docs/screenshots/director-approval.png`
-- `docs/screenshots/finance-queue.png`
-
-How to add screenshots:
-
-1) Create the folder: `docs/screenshots/`
-2) Take screenshots (desktop browser or phone)
-3) Save them with the filenames above
-4) Commit and push
+```md
+![Login](docs/screenshots/login.png)
+![New Expense](docs/screenshots/sales-new-expense.png)
+![My Expenses](docs/screenshots/sales-expenses.png)
+![Director Approval](docs/screenshots/director-approval.png)
+![Finance Queue](docs/screenshots/finance-queue.png)
+```
 
 ## API Example
 
@@ -88,33 +80,33 @@ Prereqs:
 - Node.js 20+ recommended
 - Docker (optional, for local Postgres)
 
-1) Start PostgreSQL (Docker)
+Start PostgreSQL (Docker):
 
 ```powershell
 cd expenseflow-mobile-first
 docker compose up -d db
 ```
 
-1) Install deps (repo root)
+Install deps (repo root):
 
 ```powershell
 cd expenseflow-mobile-first
 npm install
 ```
 
-1) Run API
+Run API:
 
 ```powershell
 npm -w services/api run dev
 ```
 
-1) Run Mobile PWA
+Run Mobile PWA:
 
 ```powershell
 npm -w apps/mobile run dev
 ```
 
-Configure environment variables (do not commit `.env` files):
+Environment variables (do not commit `.env` files):
 
 - `services/api/.env`: DB connection, `PUBLIC_BASE_URL`, `APP_BASE_URL`, `ORIGIN`, mail provider settings
 - `apps/mobile/.env`: `VITE_API_BASE_URL`
@@ -124,14 +116,21 @@ Managed Postgres often requires SSL/TLS:
 - Set `DB_SSL=true`
 - If your provider uses a non-standard chain, set `DB_SSL_REJECT_UNAUTHORIZED=false`
 
+Bootstrap (first Super Admin):
+
+- This repo intentionally does not auto-seed users in production.
+- Create the first `super_admin` directly in Postgres (Render/DBeaver), then log into the PWA.
+
 ## Live Demo
 
 - (Add link here)
 
-## Demo Flow (2–3 minutes)
+## Demo Flow
 
-1) **Login as Sales** → create an expense (attach receipt photo)
-2) Tap **Submit** → expense becomes `submitted`
-3) **Director receives email** → taps **Open details** (PWA opens, no login) → taps **Approve**
-4) Expense becomes `approved` and **Finance receives an email**
-5) **Login as Finance** → open Finance queue → **Verify** then **Post**
+1) **Super Admin**: create a company (domain-based)
+2) **Company Admin**: create users (Sales, Director, Finance) and set the default director in **Settings**
+3) **Sales**: create an expense (attach receipt photo)
+4) Tap **Submit** → director gets an email with Approve/Reject/Open details
+5) **Director**: approve via email link (PWA opens, no login required)
+6) **Finance**: verify + post, then export CSV
+
