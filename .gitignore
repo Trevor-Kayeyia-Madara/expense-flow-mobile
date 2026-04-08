@@ -4,6 +4,7 @@ dist/
 .env.example
 .DS_Store
 Thumbs.db
+*.tsbuildinfo
 
 services/api/uploads/
 services/api/certs/

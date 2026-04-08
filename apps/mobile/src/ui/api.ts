@@ -53,6 +53,40 @@ export type ExpenseListItem = {
 
 export type FinanceListItem = ExpenseListItem;
 
+export type ExpenseReceipt = {
+  id: string;
+  fileKey: string;
+  fileName: string | null;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+};
+
+export type ExpenseApproval = {
+  id: string;
+  decision: "approved" | "rejected" | string;
+  comment: string | null;
+  approverEmail: string;
+  createdAt: string;
+};
+
+export type ExpenseDetails = ExpenseListItem & {
+  receipts: ExpenseReceipt[];
+  approvals: ExpenseApproval[];
+  submittedAt: string | null;
+  decidedAt: string | null;
+  verifiedAt: string | null;
+  postedAt: string | null;
+};
+
+export type NotificationItem = {
+  id: string;
+  title: string;
+  message: string;
+  readAt: string | null;
+  createdAt: string;
+};
+
 export class ApiClient {
   constructor(
     private readonly baseUrl: string,
@@ -180,6 +214,18 @@ export class ApiClient {
     return (await res.json()) as { items: ExpenseListItem[] };
   }
 
+  async getExpense(expenseId: string): Promise<ExpenseDetails> {
+    const res = await this.request(`/expenses/${expenseId}`, { method: "GET", headers: this.headers() });
+    if (!res.ok) throw new Error(await safeText(res));
+    return (await res.json()) as ExpenseDetails;
+  }
+
+  async downloadReceipt(receiptId: string): Promise<Blob> {
+    const res = await this.request(`/expenses/receipts/${receiptId}/file`, { method: "GET", headers: this.headers() });
+    if (!res.ok) throw new Error(await safeText(res));
+    return await res.blob();
+  }
+
   async financeList(status?: "approved" | "verified" | "posted") {
     const qs = new URLSearchParams();
     if (status) qs.set("status", status);
@@ -209,6 +255,17 @@ export class ApiClient {
     });
     if (!res.ok) throw new Error(await safeText(res));
     return (await res.json()) as { ok: true };
+  }
+
+  async financeExportCsv(status?: "approved" | "verified" | "posted"): Promise<Blob> {
+    const qs = new URLSearchParams();
+    if (status) qs.set("status", status);
+    const res = await this.request(`/finance/expenses.csv${qs.toString() ? `?${qs}` : ""}`, {
+      method: "GET",
+      headers: this.headers()
+    });
+    if (!res.ok) throw new Error(await safeText(res));
+    return await res.blob();
   }
 
   async listUsers() {
@@ -259,6 +316,29 @@ export class ApiClient {
     });
     if (!res.ok) throw new Error(await safeText(res));
     return (await res.json()) as { id: string };
+  }
+
+  async listNotifications(opts?: { unreadOnly?: boolean }) {
+    const qs = new URLSearchParams();
+    if (opts?.unreadOnly) qs.set("unread", "true");
+    const res = await this.request(`/notifications${qs.toString() ? `?${qs}` : ""}`, {
+      method: "GET",
+      headers: this.headers()
+    });
+    if (!res.ok) throw new Error(await safeText(res));
+    return (await res.json()) as { items: NotificationItem[] };
+  }
+
+  async unreadNotificationsCount() {
+    const res = await this.request(`/notifications/unread-count`, { method: "GET", headers: this.headers() });
+    if (!res.ok) throw new Error(await safeText(res));
+    return (await res.json()) as { count: number };
+  }
+
+  async markNotificationRead(id: string) {
+    const res = await this.request(`/notifications/${id}/read`, { method: "PATCH", headers: this.headers() });
+    if (!res.ok) throw new Error(await safeText(res));
+    return (await res.json()) as { ok: true };
   }
 
   async companyMe(): Promise<CompanyMe> {

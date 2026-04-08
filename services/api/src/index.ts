@@ -15,6 +15,8 @@ import { usersRoutes } from "./routes/users";
 import { financeRoutes } from "./routes/finance";
 import { companiesRoutes } from "./routes/companies";
 import { approvalEmailRoutes } from "./routes/approvalEmail";
+import { notificationsRoutes } from "./routes/notifications";
+import { isMailConfigured } from "./lib/mailer";
 
 async function main() {
   const app = Fastify({ logger: true });
@@ -57,7 +59,7 @@ async function main() {
   await initPostgres();
   await migrate();
 
-  app.get("/health", async () => ({ ok: true }));
+  app.get("/health", async () => ({ ok: true, mailConfigured: isMailConfigured() }));
 
   await app.register(authRoutes, { prefix: "/auth" });
   await app.register(companiesRoutes, { prefix: "/companies" });
@@ -65,6 +67,7 @@ async function main() {
   await app.register(expensesRoutes, { prefix: "/expenses" });
   await app.register(approvalEmailRoutes, { prefix: "/approval" });
   await app.register(financeRoutes, { prefix: "/finance" });
+  await app.register(notificationsRoutes, { prefix: "/notifications" });
 
   const listenSchema = z.object({
     PORT: z.coerce.number().min(1).max(65535).default(4000),

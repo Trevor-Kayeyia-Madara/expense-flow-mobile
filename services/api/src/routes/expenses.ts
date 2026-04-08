@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { createWriteStream } from "node:fs";
+import { createReadStream, createWriteStream } from "node:fs";
 import { mkdir, readFile, stat, unlink } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { dirname, resolve } from "node:path";
@@ -143,7 +143,21 @@ export const expensesRoutes: FastifyPluginAsync = async (app) => {
       [params.id, companyId]
     );
 
-    return { ...expense, receipts: receipts.rows };
+    const approvals = await pool.query(
+      `SELECT a.id,
+              a.decision,
+              a.comment,
+              a.created_at as "createdAt",
+              u.email as "approverEmail"
+       FROM approvals a
+       JOIN users u ON u.id = a.approver_id
+       WHERE a.expense_id = $1 AND a.company_id = $2
+       ORDER BY a.created_at DESC
+       LIMIT 50`,
+      [params.id, companyId]
+    );
+
+    return { ...expense, receipts: receipts.rows, approvals: approvals.rows };
   });
 
   // Create expense (draft). Supports optional receipt upload (multipart).
@@ -360,6 +374,31 @@ export const expensesRoutes: FastifyPluginAsync = async (app) => {
       // ignore
     }
     return { ok: true };
+  });
+
+  // Download a receipt file (authenticated). Use fetch+blob in the frontend; <img> tags can't send auth headers.
+  app.get("/receipts/:id/file", async (req, reply) => {
+    const { userId, companyId, role } = await requireAuth(app, req);
+    const params = z.object({ id: z.string().uuid() }).parse(req.params);
+    const pool = getPool();
+
+    const row = await pool.query(
+      `SELECT r.file_key as "fileKey",
+              r.mime_type as "mimeType",
+              e.user_id as "expenseUserId"
+       FROM receipts r
+       JOIN expenses e ON e.id = r.expense_id
+       WHERE r.id = $1 AND r.company_id = $2
+       LIMIT 1`,
+      [params.id, companyId]
+    );
+    if (!row.rowCount) throw new Error("Receipt not found");
+    const r = row.rows[0] as { fileKey: string; mimeType: string; expenseUserId: string };
+    if (role === "sales" && r.expenseUserId !== userId) throw new Error("Not allowed");
+
+    const full = resolve(env.UPLOAD_DIR, r.fileKey);
+    reply.type(r.mimeType);
+    return reply.send(createReadStream(full));
   });
 
   // Submit expense for director approval (sends email links).

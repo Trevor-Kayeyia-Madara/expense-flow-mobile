@@ -35,13 +35,37 @@ export function FinanceQueue(props: {
       <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
         <div className="flex items-end justify-between gap-3">
           <h1 className="text-[18px] font-extrabold tracking-tight">Finance queue</h1>
-          <button
-            className="rounded-xl px-3 py-2 text-[13px] font-bold text-blue-700 hover:bg-blue-50 active:bg-blue-100 disabled:opacity-60"
-            disabled={busy}
-            onClick={() => void load()}
-          >
-            {busy ? "Refreshing..." : "Refresh"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              className="rounded-xl px-3 py-2 text-[13px] font-bold text-slate-700 hover:bg-slate-100 active:bg-slate-200 disabled:opacity-60"
+              disabled={busy}
+              onClick={async () => {
+                try {
+                  const blob = await props.api.financeExportCsv("approved");
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `finance-approved-${new Date().toISOString().slice(0, 10)}.csv`;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+                  props.onNotify?.("CSV exported.", "success");
+                } catch (e) {
+                  props.onNotify?.(e instanceof Error ? e.message : "Export failed", "error");
+                }
+              }}
+            >
+              Export CSV
+            </button>
+            <button
+              className="rounded-xl px-3 py-2 text-[13px] font-bold text-blue-700 hover:bg-blue-50 active:bg-blue-100 disabled:opacity-60"
+              disabled={busy}
+              onClick={() => void load()}
+            >
+              {busy ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
         </div>
         <div className="mt-3 text-[13px] font-semibold text-slate-600">Approved: {items.length}</div>
       </div>
@@ -59,7 +83,20 @@ export function FinanceQueue(props: {
       ) : (
         <div className="grid gap-3">
           {items.map((e) => (
-            <div key={e.id} className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+            <div
+              key={e.id}
+              className="cursor-pointer rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200 active:opacity-95"
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                window.location.hash = `#/expense?id=${encodeURIComponent(e.id)}`;
+              }}
+              onKeyDown={(ev) => {
+                if (ev.key === "Enter" || ev.key === " ") {
+                  window.location.hash = `#/expense?id=${encodeURIComponent(e.id)}`;
+                }
+              }}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="truncate text-[15px] font-extrabold text-slate-900">{e.description}</div>
@@ -78,7 +115,8 @@ export function FinanceQueue(props: {
                     "rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-500 px-4 py-3 text-[15px] font-extrabold text-white shadow-sm active:opacity-90",
                     busy ? "opacity-70" : ""
                   )}
-                  onClick={async () => {
+                  onClick={async (ev) => {
+                    ev.stopPropagation();
                     try {
                       await props.api.financeVerify(e.id);
                       props.onNotify?.("Verified.", "success");
@@ -97,7 +135,8 @@ export function FinanceQueue(props: {
                     "rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[15px] font-extrabold text-slate-800 shadow-sm hover:bg-slate-50 active:bg-slate-100",
                     busy ? "opacity-70" : ""
                   )}
-                  onClick={async () => {
+                  onClick={async (ev) => {
+                    ev.stopPropagation();
                     try {
                       await props.api.financePost(e.id);
                       props.onNotify?.("Posted.", "success");

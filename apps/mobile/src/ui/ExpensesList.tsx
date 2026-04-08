@@ -110,7 +110,19 @@ function ExpenseRow(props: {
   const canSubmit = props.e.status === "draft" || props.e.status === "rejected";
 
   return (
-    <div className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+    <div
+      className="cursor-pointer rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200 active:opacity-95"
+      role="button"
+      tabIndex={0}
+      onClick={() => {
+        window.location.hash = `#/expense?id=${encodeURIComponent(props.e.id)}`;
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          window.location.hash = `#/expense?id=${encodeURIComponent(props.e.id)}`;
+        }
+      }}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="truncate text-[15px] font-extrabold text-slate-900">{props.e.description}</div>
@@ -135,7 +147,8 @@ function ExpenseRow(props: {
             actionBusy ? "opacity-70" : ""
           )}
           disabled={props.busy || actionBusy}
-          onClick={async () => {
+          onClick={async (e) => {
+            e.stopPropagation();
             setActionBusy(true);
             try {
               const res = await props.api.submitExpense(props.e.id);
@@ -174,4 +187,3 @@ function StatusPill(props: { status: string }) {
     <div className={cx("rounded-full border px-2 py-1 text-[12px] font-bold", cls)}>{props.status}</div>
   );
 }
-
